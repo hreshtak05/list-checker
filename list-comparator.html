@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>List Comparator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 32px; }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 640px) { .upload-grid { grid-template-columns: 1fr; } }
+
+  .upload-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .upload-card h2 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .upload-card .desc { font-size: 12px; color: #888; margin-bottom: 14px; }
+
+  .input-tabs {
+    display: flex;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .tab-btn {
+    flex: 1; padding: 7px 10px; font-size: 12px; font-weight: 600;
+    border: none; background: #f9fafb; color: #888; cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn.active { background: #6366f1; color: white; }
+
+  .drop-zone {
+    border: 2px dashed #d0d5dd; border-radius: 10px; padding: 24px 16px;
+    text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; background: #f5f3ff; }
+  .drop-zone .icon { font-size: 26px; margin-bottom: 6px; }
+  .drop-zone p { font-size: 13px; color: #666; }
+  .drop-zone span { color: #6366f1; font-weight: 600; }
+  .drop-zone input[type="file"] { display: none; }
+
+  .paste-textarea {
+    width: 100%; height: 150px; border: 2px solid #d0d5dd; border-radius: 10px;
+    padding: 12px; font-size: 12px; font-family: monospace; resize: vertical;
+    outline: none; transition: border-color 0.2s; background: #fafafa; color: #333;
+  }
+  .paste-textarea:focus { border-color: #6366f1; background: #fff; }
+  .paste-textarea::placeholder { color: #bbb; font-family: -apple-system, sans-serif; font-size: 12px; }
+  .paste-hint { font-size: 11px; color: #aaa; margin-top: 5px; }
+  .paste-apply-btn {
+    margin-top: 8px; width: 100%; padding: 8px; background: #6366f1;
+    color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .paste-apply-btn:hover { background: #4f46e5; }
+
+  .file-info {
+    display: none; align-items: center; gap: 8px;
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 9px 12px; margin-top: 10px; font-size: 13px;
+  }
+  .file-info .file-name { font-weight: 600; color: #16a34a; flex: 1; word-break: break-all; font-size: 12px; }
+  .file-info .file-count { color: #666; white-space: nowrap; font-size: 12px; }
+  .file-info .remove-btn { background: none; border: none; cursor: pointer; color: #999; font-size: 15px; }
+  .file-info .remove-btn:hover { color: #ef4444; }
+
+  .run-btn {
+    display: block; width: 100%; padding: 14px;
+    background: #6366f1; color: white; font-size: 16px; font-weight: 600;
+    border: none; border-radius: 12px; cursor: pointer; transition: background 0.2s; margin-bottom: 24px;
+  }
+  .run-btn:hover { background: #4f46e5; }
+  .run-btn:disabled { background: #c7d2fe; cursor: not-allowed; }
+
+  .results-card {
+    display: none; background: white; border-radius: 14px;
+    padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+  }
+  .results-header h3 { font-size: 16px; font-weight: 700; }
+  .badge {
+    background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+    border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 600;
+  }
+  .stats-row { display: flex; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat { background: #f8f9fb; border-radius: 10px; padding: 10px 16px; font-size: 13px; }
+  .stat strong { display: block; font-size: 20px; font-weight: 700; color: #6366f1; }
+  .stat span { color: #888; }
+
+  .action-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .btn-copy, .btn-download {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .btn-copy { background: #ede9fe; color: #6366f1; }
+  .btn-copy:hover { background: #ddd6fe; }
+  .btn-download { background: #6366f1; color: white; }
+  .btn-download:hover { background: #4f46e5; }
+  .btn-copy.copied { background: #dcfce7; color: #16a34a; }
+
+  .results-table-wrap {
+    overflow-x: auto; max-height: 440px; overflow-y: auto;
+    border-radius: 8px; border: 1px solid #e5e7eb;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f8f9fb; padding: 10px 14px; text-align: left;
+    font-weight: 600; font-size: 12px; color: #555;
+    position: sticky; top: 0; border-bottom: 1px solid #e5e7eb;
+  }
+  tbody tr:hover { background: #f5f3ff; }
+  td {
+    padding: 9px 14px; border-bottom: 1px solid #f0f0f0;
+    max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .no-results { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
+  .tag-phone { background: #dbeafe; color: #1d4ed8; }
+  .tag-email { background: #fef3c7; color: #92400e; }
+  .tag-name  { background: #f3f4f6; color: #374151; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📋 List Comparator</h1>
+  <p class="subtitle">Finds everyone in the big list whose phone number is <strong>not</strong> in the small list. Columns can be in any order — it figures it out automatically.</p>
+
+  <div class="upload-grid">
+
+    <!-- BIG LIST -->
+    <div class="upload-card">
+      <h2>🗂 Big List</h2>
+      <p class="desc">The large list — phone, name, email in any order</p>
+      <div class="input-tabs">
+        <button class="tab-btn active" onclick="switchTab('big','upload',this)">📂 Upload File</button>
+        <button class="tab-btn" onclick="switchTab('big','paste',this)">📋 Paste Text</button>
+      </div>
+      <div id="bigUploadArea">
+        <div class="drop-zone" id="dropBig" onclick="document.getElementById('fileBig').click()">
+          <div class="icon">📂</div>
+          <p><span>Click to upload</span> or drag & drop</p>
+          <p style="margin-top:4px;font-size:11px;color:#aaa;">TXT, CSV supported</p>
+          <input type="file" id="fileBig" accept=".txt,.csv,.tsv" onchange="handleFile('big',this)">
+        </div>
+      </div>
+      <div id="bigPasteArea" style="display:none;">
+        <textarea class="paste-textarea" id="pasteBig"
+          placeholder="Paste your big list here...&#10;&#10;Columns can be in any order — phone, name, email&#10;all get detected automatically&#10;&#10;Example:&#10;John Smith	37499123456	john@email.com&#10;37477654321	anna@test.com	Anna K."></textarea>
+        <p class="paste-hint">Tip: copy from Excel, Google Sheets, or any text file and paste directly.</p>
+        <button class="paste-apply-btn" onclick="applyPaste('big')">✓ Use This Data</button>
+      </div>
+      <div class="file-info" id="infoBig">
+        <span>✅</span>
+        <span class="file-name" id="nameBig"></span>
+        <span class="file-count" id="countBig"></span>
+        <button class="remove-btn" onclick="clearFile('big')">✕</button>
+      </div>
+    </div>
+
+    <!-- SMALL LIST -->
+    <div class="upload-card">
+      <h2>📝 Small List</h2>
+      <p class="desc">Numbers to exclude — any format, any order</p>
+      <div class="input-tabs">
+        <button class="tab-btn active" onclick="switchTab('small','upload',this)">📂 Upload File</button>
+        <button class="tab-btn" onclick="switchTab('small','paste',this)">📋 Paste Text</button>
+      </div>
+      <div id="smallUploadArea">
+        <div class="drop-zone" id="dropSmall" onclick="document.getElementById('fileSmall').click()">
+          <div class="icon">📂</div>
+          <p><span>Click to upload</span> or drag & drop</p>
+          <p style="margin-top:4px;font-size:11px;color:#aaa;">TXT, CSV supported</p>
+          <input type="file" id="fileSmall" accept=".txt,.csv,.tsv" onchange="handleFile('small',this)">
+        </div>
+      </div>
+      <div id="smallPasteArea" style="display:none;">
+        <textarea class="paste-textarea" id="pasteSmall"
+          placeholder="Paste your small list here...&#10;&#10;Can be just phone numbers, or a full list&#10;Phone numbers are extracted automatically&#10;&#10;Example:&#10;37499123456&#10;37477654321&#10;Anna	37491000000	anna@x.com"></textarea>
+        <p class="paste-hint">Tip: just phone numbers work fine, or paste the full list — it finds the numbers either way.</p>
+        <button class="paste-apply-btn" onclick="applyPaste('small')">✓ Use This Data</button>
+      </div>
+      <div class="file-info" id="infoSmall">
+        <span>✅</span>
+        <span class="file-name" id="nameSmall"></span>
+        <span class="file-count" id="countSmall"></span>
+        <button class="remove-btn" onclick="clearFile('small')">✕</button>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled onclick="runComparison()">
+    Compare Lists →
+  </button>
+
+  <!-- Results -->
+  <div class="results-card" id="resultsCard">
+    <div class="results-header">
+      <h3>Results</h3>
+      <span class="badge" id="resultBadge"></span>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="action-btns">
+      <button class="btn-copy" id="btnCopy" onclick="copyToClipboard()">📋 Copy for Google Sheets</button>
+      <button class="btn-download" onclick="downloadTXT()">⬇️ Download TXT</button>
+    </div>
+    <div class="results-table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let bigData  = null;  // array of parsed contact objects {name, phone, email, raw}
+  let smallData = null;
+  let resultRows = [];
+
+  // ── Tab switching ──
+  function switchTab(which, mode, btn) {
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(which + 'UploadArea').style.display = mode === 'upload' ? 'block' : 'none';
+    document.getElementById(which + 'PasteArea').style.display  = mode === 'paste'  ? 'block' : 'none';
+  }
+
+  // ── Drag and drop ──
+  ['dropBig','dropSmall'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault(); el.classList.remove('drag-over');
+      const which = id === 'dropBig' ? 'big' : 'small';
+      if (e.dataTransfer.files[0]) processFile(which, e.dataTransfer.files[0]);
+    });
+  });
+
+  function handleFile(which, input) {
+    if (input.files[0]) processFile(which, input.files[0]);
+  }
+
+  function processFile(which, file) {
+    const reader = new FileReader();
+    reader.onload = e => loadData(which, e.target.result, file.name);
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function applyPaste(which) {
+    const val = document.getElementById('paste' + (which === 'big' ? 'Big' : 'Small')).value.trim();
+    if (!val) { alert('Please paste some data first.'); return; }
+    loadData(which, val, 'Pasted data');
+  }
+
+  // ── Core: load + parse ──
+  function loadData(which, text, label) {
+    const contacts = parseContacts(text);
+    if (!contacts.length) { alert('No rows detected. Make sure you have one contact per line.'); return; }
+
+    if (which === 'big') {
+      bigData = contacts;
+      document.getElementById('nameBig').textContent  = label;
+      document.getElementById('countBig').textContent = contacts.length + ' rows';
+      document.getElementById('infoBig').style.display = 'flex';
+    } else {
+      smallData = contacts;
+      document.getElementById('nameSmall').textContent  = label;
+      document.getElementById('countSmall').textContent = contacts.length + ' rows';
+      document.getElementById('infoSmall').style.display = 'flex';
+    }
+    checkReady();
+  }
+
+  // ── Smart per-row parser ──
+  // For each row, scan every cell and classify it as phone / email / name
+  function parseContacts(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (!lines.length) return [];
+
+    // Detect delimiter
+    const sample = lines.slice(0, 5).join('\n');
+    const tabs   = (sample.match(/\t/g) || []).length;
+    const commas = (sample.match(/,/g)  || []).length;
+    const delim  = tabs >= commas ? '\t' : ',';
+
+    // Skip header row if present
+    const firstCells = lines[0].split(delim).map(c => c.trim());
+    const isHeader = firstCells.every(c => isNaN(c) && !isPhoneCell(c) && !isEmailCell(c) && c.length < 40);
+    const dataLines = isHeader ? lines.slice(1) : lines;
+
+    return dataLines
+      .filter(l => l.trim())
+      .map(line => classifyRow(line.split(delim).map(c => c.trim())));
+  }
+
+  function isPhoneCell(v) {
+    const clean = v.replace(/[\s\-\(\)\+]/g, '');
+    return /^\d{6,15}$/.test(clean);
+  }
+
+  function isEmailCell(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
+  function isNameCell(v) {
+    // Has letters, not purely a number, not an email
+    return v.length > 0 && /\p{L}/u.test(v) && !isPhoneCell(v) && !isEmailCell(v);
+  }
+
+  function classifyRow(cells) {
+    let phone = '', email = '', nameParts = [];
+
+    cells.forEach(cell => {
+      if (!cell) return;
+      if (!phone && isPhoneCell(cell)) {
+        phone = cell;
+      } else if (!email && isEmailCell(cell)) {
+        email = cell;
+      } else if (isNameCell(cell)) {
+        nameParts.push(cell);
+      }
+    });
+
+    return {
+      phone: normalizePhone(phone),
+      rawPhone: phone,
+      email,
+      name: nameParts.join(' ').trim(),
+      raw: cells.join('\t')
+    };
+  }
+
+  function normalizePhone(p) {
+    return (p || '').replace(/[\s\-\(\)\+]/g, '');
+  }
+
+  function clearFile(which) {
+    if (which === 'big') {
+      bigData = null;
+      document.getElementById('fileBig').value = '';
+      document.getElementById('pasteBig').value = '';
+      document.getElementById('infoBig').style.display = 'none';
+    } else {
+      smallData = null;
+      document.getElementById('fileSmall').value = '';
+      document.getElementById('pasteSmall').value = '';
+      document.getElementById('infoSmall').style.display = 'none';
+    }
+    checkReady();
+  }
+
+  function checkReady() {
+    document.getElementById('runBtn').disabled = !(bigData && smallData);
+  }
+
+  // ── Run comparison ──
+  function runComparison() {
+    if (!bigData || !smallData) return;
+
+    // Build exclusion set from small list (all phone numbers found in it)
+    const excludePhones = new Set();
+    smallData.forEach(c => { if (c.phone) excludePhones.add(c.phone); });
+
+    // Filter big list
+    resultRows = bigData.filter(c => c.phone && !excludePhones.has(c.phone));
+
+    showResults();
+  }
+
+  function showResults() {
+    const card = document.getElementById('resultsCard');
+    card.style.display = 'block';
+
+    document.getElementById('resultBadge').textContent = resultRows.length.toLocaleString() + ' contacts found';
+
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat"><strong>${bigData.length.toLocaleString()}</strong><span>Big list</span></div>
+      <div class="stat"><strong>${smallData.length.toLocaleString()}</strong><span>Small list</span></div>
+      <div class="stat"><strong>${resultRows.length.toLocaleString()}</strong><span>In big, not in small</span></div>
+    `;
+
+    const tbody = document.getElementById('tableBody');
+    if (!resultRows.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="no-results">No results — every phone number in the big list was found in the small list.</td></tr>';
+    } else {
+      tbody.innerHTML = resultRows.map(r =>
+        `<tr>
+          <td title="${esc(r.name)}">${esc(r.name) || '<span style="color:#bbb">—</span>'}</td>
+          <td title="${esc(r.rawPhone)}">${esc(r.rawPhone)}</td>
+          <td title="${esc(r.email)}">${esc(r.email) || '<span style="color:#bbb">—</span>'}</td>
+        </tr>`
+      ).join('');
+    }
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function getTabSeparated() {
+    const rows = resultRows.map(r => [r.name, r.rawPhone, r.email].join('\t'));
+    return ['Name\tPhone\tEmail', ...rows].join('\n');
+  }
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(getTabSeparated()).then(() => {
+      const btn = document.getElementById('btnCopy');
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 Copy for Google Sheets'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function downloadTXT() {
+    const blob = new Blob(['\uFEFF' + getTabSeparated()], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'result_list.txt';
+    a.click();
+  }
+</script>
+</body>
+</html>
